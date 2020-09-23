@@ -35,4 +35,4 @@ FastGallery.Builder<String>()
 ```
 
 And here is the result :  
-<img src="" width=500>
+<img src="https://github.com/axellaffite/Fast-Gallery/blob/master/previews/FastGallery.gif?raw=true" width=500>
