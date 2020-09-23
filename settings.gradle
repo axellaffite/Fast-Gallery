@@ -1,0 +1,3 @@
+include ':FastGallery'
+include ':example'
+rootProject.name = "FastImageDisplayerExample"
