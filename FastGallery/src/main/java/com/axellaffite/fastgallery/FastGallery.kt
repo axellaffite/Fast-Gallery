@@ -204,14 +204,6 @@ class FastGallery<Image> : DialogFragment() {
         super.onDismiss(dialog)
     }
 
-    fun notifyDataSetChanged() = pager?.adapter?.notifyDataSetChanged()
-
-    fun notifyDataSetChanged(position: Int) = pager?.adapter?.notifyItemChanged(position)
-
-    fun notifyItemRemoved(position: Int) = pager?.adapter?.notifyItemRemoved(position)
-
-    fun notifyItemInserted(position: Int) = pager?.adapter?.notifyItemInserted(position)
-
-    fun notifyItemChanged(position: Int) = pager?.adapter?.notifyItemChanged(position)
+    fun getViewPager() = pager ?: null
 
 }
