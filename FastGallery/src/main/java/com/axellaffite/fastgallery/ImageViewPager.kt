@@ -49,6 +49,8 @@ class ImageViewPager<Image>(var images: List<Image>, private val converter: (Ima
 
         }
 
+        holder.setIsRecyclable(false)
+
         Picasso
             .get()
             .load(converter(images[position]))
