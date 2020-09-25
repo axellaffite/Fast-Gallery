@@ -1,6 +1,29 @@
 # Fast Gallery  
 Based on well known libraries such as [Subsampling Scale Image View](https://github.com/davemorrissey/subsampling-scale-image-view) and [Picasso](https://github.com/square/picasso), this library allows you to display images at their full resolutions.  
 
+## Implementation
+
+First, add the maven repository to your root build.gradle.
+
+```
+allprojects {
+    repositories {
+        ...
+        maven { url 'https://jitpack.io' }
+    }
+}
+```
+
+Then add the dependency to your app build.gradle :
+
+Current version: [![](https://jitpack.io/v/axellaffite/Fast-Gallery.svg)](https://jitpack.io/#axellaffite/Fast-Gallery)
+
+```
+dependencies {
+    implementation 'com.github.User:Repo:CurrentVersion'
+}
+```
+
 ## Usage
 
 The library is easy to use.  
