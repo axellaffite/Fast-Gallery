@@ -24,7 +24,6 @@ class ImageViewPager<Image>(var images: List<Image>, private val converter: (Ima
 
         return ImageViewHolder(view, object: Target {
             override fun onBitmapLoaded(bitmap: Bitmap?, from: Picasso.LoadedFrom?) {
-                println("Loaded")
                 bitmap?.let {
                     val res = onImageLoadListener?.onSuccess(bitmap) ?: bitmap
                     view.setImage(ImageSource.bitmap(res))
@@ -32,7 +31,6 @@ class ImageViewPager<Image>(var images: List<Image>, private val converter: (Ima
             }
 
             override fun onBitmapFailed(e: Exception?, errorDrawable: Drawable?) {
-                println("failed")
                 e?.printStackTrace(System.err)
                 onImageLoadListener?.onError()?.let {
                     view.setImage(ImageSource.bitmap(it))
@@ -40,7 +38,6 @@ class ImageViewPager<Image>(var images: List<Image>, private val converter: (Ima
             }
 
             override fun onPrepareLoad(placeHolderDrawable: Drawable?) {
-                println("prepare")
                 onImageLoadListener?.onPrepare()?.let {
                     view.setImage(ImageSource.bitmap(it))
                 }
