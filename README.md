@@ -5,7 +5,7 @@ Based on well known libraries such as [Subsampling Scale Image View](https://git
 
 First, add the maven repository to your root build.gradle.
 
-```json
+```
 allprojects {
     repositories {
         ...
@@ -16,11 +16,11 @@ allprojects {
 
 Then add the dependency to your app build.gradle :
 
-[![](https://jitpack.io/v/axellaffite/Fast-Gallery.svg)](https://jitpack.io/#axellaffite/Fast-Gallery)
+Current version: [![](https://jitpack.io/v/axellaffite/Fast-Gallery.svg)](https://jitpack.io/#axellaffite/Fast-Gallery)
 
-```json
+```
 dependencies {
-    implementation 'com.github.User:Repo:TagSpecifiedAbove'
+    implementation 'com.github.User:Repo:CurrentVersion'
 }
 ```
 
