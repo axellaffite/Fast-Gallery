@@ -26,6 +26,16 @@ dependencies {
 }
 ```
 
+### Permissions
+
+Don't forget to add the `INTERNET` permission to your manifest if you want to use the `fromURL()` method !
+
+```xml
+<manifest ...>
+    <uses-permission android:name="android.permission.INTERNET"/>
+</manifest>
+```
+
 ## Usage
 
 The library is easy to use.  
