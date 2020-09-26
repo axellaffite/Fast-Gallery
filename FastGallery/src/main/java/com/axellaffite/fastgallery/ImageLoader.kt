@@ -1,35 +1,50 @@
 package com.axellaffite.fastgallery
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
+import androidx.core.net.toFile
 import com.davemorrissey.labs.subscaleview.ImageSource
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
-import com.squareup.picasso.Picasso
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.io.File
 import java.io.IOException
-import java.lang.Exception
-import java.text.SimpleDateFormat
-import java.util.*
+import java.io.InputStream
+import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 
-class ImageLoader(val context: Context, private val targetImage: SubsamplingScaleImageView, private val onImageLoadListener: OnImageLoadListener?) {
+@Suppress("BlockingMethodInNonBlockingContext")
+class ImageLoader<Image>(val context: Context, private val targetImage: SubsamplingScaleImageView, private val onImageLoadListener: OnImageLoadListener<Image>?) {
+
+    private var lastImage: Any? = null
 
     companion object {
-        private val downloadMutex = Mutex()
-        private val urlMap = mapOf<String, Bitmap>()
-        private val fileMap = mapOf<String, File>()
+        private val cacheMutex = Mutex()
+        private val fileMap = mutableMapOf<String, Uri>()
+
+        fun cleanCache() {
+            Log.d(this::class.simpleName, "Cleaning up cache")
+            val files = fileMap.keys.toList()
+            fileMap.clear()
+
+            files.forEach {
+                File(it).delete()
+            }
+        }
     }
-    private var file: File? = null
 
     init {
         targetImage.setOnImageEventListener(object: SubsamplingScaleImageView.DefaultOnImageEventListener() {
             override fun onImageLoadError(e: Exception?) {
-                onImageLoadListener?.onError()
+                onImageLoadListener?.onError(e)
             }
 
             override fun onImageLoaded() {
@@ -52,30 +67,86 @@ class ImageLoader(val context: Context, private val targetImage: SubsamplingScal
      * @param cacheInPhoneMemory Try to cache the file in the phone's memory
      * by default.
      */
-    suspend fun fromURL(url: String, cacheInPhoneMemory: Boolean = true) {
+    suspend fun fromURL(url: String, cacheInPhoneMemory: Boolean = true) = withContext(IO) {
         try {
             val cached = getCachedFile(url)
-            if (cached.exists()) {
-                Log.d(this::class.simpleName, "File is cached, loading from it")
-                fromFile(cached)
+            Log.d(this@ImageLoader::class.simpleName, "File: $cached, exists: ${cached?.exists()}")
+            if (cached?.exists() == true && cached.canRead()) {
+                fromFile(fileMap[url]!!)
             } else {
-                downloadMutex.lock()
-                Log.d(this::class.simpleName, "Downloading $url")
-                val image = withContext(IO) {
-                    Picasso.get().load(Uri.parse(url)).get()
-                }
-                downloadMutex.unlock()
+                fromBitmap(Bitmap.createBitmap(1,1,Bitmap.Config.RGB_565))
+                val imageStream = withContext(IO) {
+                    Log.d(this@ImageLoader::class.simpleName, "Donwloading $url")
 
-                fromBitmap(image, cacheInPhoneMemory)
+                    OkHttpClient.Builder()
+                        .connectTimeout(5, TimeUnit.SECONDS)
+                        .readTimeout(5, TimeUnit.SECONDS)
+                        .build()
+                        .run {
+                            val req = Request.Builder().get().url(url).build()
+                            newCall(req).execute().body()?.byteStream()
+                        }
+                }
+
+
+                if (cacheInPhoneMemory) {
+                    try {
+                        cacheInMemory(url, imageStream)
+                        fromFile(fileMap[url]!!)
+                    } catch (e: IOException) {
+                        Log.e(this::class.simpleName, "Unable to cache the file")
+
+                        val image = BitmapFactory.decodeStream(imageStream)
+                        image?.also { fromBitmap(it) }
+                            ?: run { onImageLoadListener?.onError(e) }
+                    }
+                } else {
+                    val image = BitmapFactory.decodeStream(imageStream)
+                    fromBitmap(image)
+                }
             }
         } catch (e: IOException) {
-            cleanCachedFile()
-            onImageLoadListener?.onError()
+            onImageLoadListener?.onError(e)
         }
     }
 
-    private fun getCachedFile(url: String): File {
-        return File(context.cacheDir, "$url.bmp")
+    private fun getCachedFile(url: String): File? {
+        return fileMap[url]?.toFile()
+    }
+
+    @Throws(IOException::class)
+    private suspend fun cacheInMemory(url: String, bitmap: InputStream?): File = withContext(IO) {
+        val filename = toMD5(url)
+        context.cacheDir.mkdirs()
+        val file = File(context.filesDir, "$filename.jpg")
+        bitmap?.copyTo(file.outputStream())
+
+        Log.d(this@ImageLoader::class.simpleName, "Cached to: ${file.absolutePath}")
+
+        file.also {
+            fileMap[url] = Uri.fromFile(it)
+        }
+    }
+
+    @Throws(IOException::class)
+    private suspend fun cacheInMemory(url: String, bitmap: Bitmap): File = withContext(IO) {
+        cacheMutex.withLock {
+            val filename = toMD5(url)
+            context.cacheDir.mkdirs()
+            val file = File(context.filesDir, "$filename.jpg")
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, file.outputStream())
+
+            Log.d(this@ImageLoader::class.simpleName, "Cached to: ${file.absolutePath}")
+
+            file.also {
+                fileMap[url] = Uri.fromFile(it)
+            }
+        }
+    }
+
+    private fun toMD5(str: String) :String {
+        return MessageDigest.getInstance("MD5")
+            .digest(str.toByteArray()).joinToString("") { "%02x".format(it) }
     }
 
 
@@ -93,35 +164,21 @@ class ImageLoader(val context: Context, private val targetImage: SubsamplingScal
      * @param cacheInPhoneMemory Try to cache the file in the phone's memory
      * by default.
      */
-    @SuppressLint("SimpleDateFormat")
-    suspend fun fromBitmap(image: Bitmap, cacheInPhoneMemory: Boolean = true) {
-        if (cacheInPhoneMemory) {
-            try {
-                val prefix = SimpleDateFormat("yyyy/mm/dd_HH:mm:ss${Random().nextLong()}").format(Date())
-
-                cleanCachedFile()
-                file = withContext(IO) {
-                    File.createTempFile(prefix, ".bmp", context.cacheDir)
-                }.also {
-                    fromFile(it)
-                }
-            } catch (e: IOException) {
-                cleanCachedFile()
-                fromBitmap(image, false)
-            }
-        } else {
-            targetImage.setImage(ImageSource.bitmap(image))
-        }
+    suspend fun fromBitmap(image: Bitmap) = withContext(Main) {
+        targetImage.setImage(ImageSource.bitmap(image))
     }
 
     /**
      * Best option to use, the optimization is used by default with this option.
      *
-     * @param file
+     * @param uri
      */
     @Throws(IOException::class)
-    fun fromFile(file: File) {
-        targetImage.setImage(ImageSource.uri(Uri.parse(file.absolutePath)))
+    suspend fun fromFile(uri: Uri) = withContext(Main) {
+        if (lastImage != uri) {
+            lastImage = uri
+            targetImage.setImage(ImageSource.uri(uri))
+        }
     }
 
     /**
@@ -129,14 +186,8 @@ class ImageLoader(val context: Context, private val targetImage: SubsamplingScal
      *
      * @param resID
      */
-    fun fromResource(resID: Int) {
+    suspend fun fromResource(resID: Int) = withContext(Main) {
         targetImage.setImage(ImageSource.resource(resID))
     }
-
-    /**
-     * Do not call this function. It's called by the pager.
-     *
-     */
-    fun cleanCachedFile() = file?.delete()
 
 }

@@ -45,7 +45,7 @@ class FastGallery<Image> : DialogFragment() {
          *
          * @param converter
          */
-        fun withConverter(converter: (Image, ImageLoader) -> Unit) = this.apply {
+        fun withConverter(converter: (Image, ImageLoader<Image>) -> Unit) = this.apply {
             fragment.config.converter = converter
         }
 
@@ -66,7 +66,7 @@ class FastGallery<Image> : DialogFragment() {
          *
          * @param listener
          */
-        fun withOnImageLoadListener(listener: OnImageLoadListener) = this.apply {
+        fun withOnImageLoadListener(listener: OnImageLoadListener<Image>) = this.apply {
             fragment.config.loadListener = listener
         }
 
@@ -136,11 +136,11 @@ class FastGallery<Image> : DialogFragment() {
 
     class Configuration<Image> {
         var dataSet : List<Image> = listOf()
-        var converter : ((Image, ImageLoader) -> Unit)? = null
+        var converter : ((Image, ImageLoader<Image>) -> Unit)? = null
         var overlayLayout : View? = null
         var initialPosition = 0
         var onDismissListener : (() -> Unit)? = null
-        var loadListener : OnImageLoadListener? = null
+        var loadListener : OnImageLoadListener<Image>? = null
         var slideAnimation: ViewPager2.PageTransformer? = null
         var offscreenLimit = 1
         var backgroundResource = android.R.color.background_dark
@@ -153,6 +153,11 @@ class FastGallery<Image> : DialogFragment() {
 
     private var config = Configuration<Image>()
     private val viewModel: FastGalleryViewModel by viewModels()
+
+    override fun onDestroy() {
+        ImageLoader.cleanCache()
+        super.onDestroy()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -185,7 +190,10 @@ class FastGallery<Image> : DialogFragment() {
 
         config.run {
             pager.apply {
-                adapter = ImageViewPager(dataSet, converter!!)
+                adapter = ImageViewPager(dataSet, converter!!).apply {
+                    onImageLoadListener = config.loadListener
+                }
+
                 setCurrentItem(initialPosition, false)
                 setPageTransformer(config.slideAnimation)
                 setBackgroundResource(config.backgroundResource)

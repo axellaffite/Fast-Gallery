@@ -1,11 +1,9 @@
 package com.axellaffite.fastgallery
 
-import android.graphics.Bitmap
+abstract class OnImageLoadListener<Image> {
+    open fun onError(e: Exception?) { e?.printStackTrace() }
 
-abstract class OnImageLoadListener {
-    fun onError() { }
+    open fun onSuccess() { }
 
-    fun onSuccess() { }
-
-    fun onPrepare() { }
+    open fun onPrepare() { }
 }
