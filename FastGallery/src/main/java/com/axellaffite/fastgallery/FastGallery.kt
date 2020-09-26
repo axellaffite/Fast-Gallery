@@ -1,7 +1,6 @@
 package com.axellaffite.fastgallery
 
 import android.content.DialogInterface
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -46,7 +45,7 @@ class FastGallery<Image> : DialogFragment() {
          *
          * @param converter
          */
-        fun withConverter(converter: (Image) -> Uri) = this.apply {
+        fun withConverter(converter: (Image, ImageLoader) -> Unit) = this.apply {
             fragment.config.converter = converter
         }
 
@@ -137,7 +136,7 @@ class FastGallery<Image> : DialogFragment() {
 
     class Configuration<Image> {
         var dataSet : List<Image> = listOf()
-        var converter : ((Image) -> Uri)? = null
+        var converter : ((Image, ImageLoader) -> Unit)? = null
         var overlayLayout : View? = null
         var initialPosition = 0
         var onDismissListener : (() -> Unit)? = null
