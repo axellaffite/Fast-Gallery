@@ -84,7 +84,7 @@ class ImageLoader<Image>(val context: Context, private val targetImage: Subsampl
                         .build()
                         .run {
                             val req = Request.Builder().get().url(url).build()
-                            newCall(req).execute().body()?.byteStream()
+                            newCall(req).execute().body?.byteStream()
                         }
                 }
 

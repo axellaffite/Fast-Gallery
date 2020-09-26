@@ -36,7 +36,7 @@ class MainActivity : AppCompatActivity() {
             .withInitialPosition(0)
             .withSlideAnimation(SlideAnimations.depthPageAnimation())
             .withBackgroundResource(R.color.colorGalleryBackground)
-            .withOffscreenLimit(1)
+            .withOffscreenLimit(3)
             .withOnImageLoadListener(object: OnImageLoadListener<String>() {
                 override fun onError(e: Exception?) {
                     e?.printStackTrace()
