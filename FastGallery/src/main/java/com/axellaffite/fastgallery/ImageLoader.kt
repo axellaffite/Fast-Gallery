@@ -42,15 +42,19 @@ class ImageLoader<Image>(val context: Context, private val targetImage: Subsampl
     }
 
     init {
-        targetImage.setOnImageEventListener(object: SubsamplingScaleImageView.DefaultOnImageEventListener() {
-            override fun onImageLoadError(e: Exception?) {
-                onImageLoadListener?.onError(e)
-            }
+        targetImage.apply {
+            setOnImageEventListener(object: SubsamplingScaleImageView.DefaultOnImageEventListener() {
+                override fun onImageLoadError(e: Exception?) {
+                    onImageLoadListener?.onError(e)
+                }
 
-            override fun onImageLoaded() {
-                onImageLoadListener?.onSuccess()
-            }
-        })
+                override fun onImageLoaded() {
+                    onImageLoadListener?.onSuccess()
+                }
+            })
+
+            orientation = SubsamplingScaleImageView.ORIENTATION_USE_EXIF
+        }
     }
 
     /**
